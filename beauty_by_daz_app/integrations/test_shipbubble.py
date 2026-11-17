@@ -56,6 +56,26 @@ class TestShipbubble(FrappeTestCase):
 		self.assertEqual(dn.custom_delivery_status, "Awaiting Dispatch")
 		self.assertTrue(result.get("ignored"))
 
+	def test_regression_after_delivered_is_ignored(self):
+		dn = create_delivery_note(do_not_submit=True)
+		update_delivery_status(dn.name, "delivered")
+
+		result = update_delivery_status(dn.name, "dispatched")
+
+		dn.reload()
+		self.assertEqual(dn.custom_delivery_status, "Delivered")
+		self.assertTrue(result.get("ignored"))
+
+	def test_returned_after_delivered_is_allowed(self):
+		dn = create_delivery_note(do_not_submit=True)
+		update_delivery_status(dn.name, "delivered")
+
+		result = update_delivery_status(dn.name, "returned")
+
+		dn.reload()
+		self.assertEqual(dn.custom_delivery_status, "Returned")
+		self.assertEqual(result["status"], "Returned")
+
 	def test_cancelled_delivery_note_is_rejected(self):
 		dn = create_delivery_note()
 		dn.cancel()

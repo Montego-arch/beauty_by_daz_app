@@ -38,6 +38,15 @@ def update_delivery_status(delivery_note, status, delivered_on=None):
 		frappe.throw(_("Delivery Note {0} is cancelled and cannot be updated").format(delivery_note))
 
 	if canonical_status != "Delivered":
+		if doc.docstatus == 1 and canonical_status != "Returned":
+			# Once submitted (i.e. already Delivered), only a later Return is a
+			# legitimate forward move. Anything else is a late or out-of-order
+			# webhook call and would otherwise silently undo the delivery.
+			return {
+				"delivery_note": doc.name,
+				"ignored": True,
+				"reason": f"Delivery Note is already submitted, cannot move back to {canonical_status!r}",
+			}
 		doc.db_set("custom_delivery_status", canonical_status)
 		return {"delivery_note": doc.name, "status": canonical_status, "docstatus": doc.docstatus}
 
